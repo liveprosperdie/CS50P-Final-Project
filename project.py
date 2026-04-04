@@ -2,6 +2,9 @@ import argparse
 import re
 import sys
 import socket
+import requests
+import fpdf
+
 
 def main():
     parser=argparse.ArgumentParser(description="A security test for: 1. Ports 2. Headers 3. Password ")
@@ -10,7 +13,7 @@ def main():
     parser.add_argument("--password",default="", help="password to check its strength")
     args=parser.parse_args()
     host,url,password=validate_input(args.host,args.url,args.password)
-
+    
 
 def validate_input(host="", url="", password=""):
     if not host=="":
@@ -64,3 +67,50 @@ def scan_ports(host):
         s.close()
     return open_ports
 
+
+def check_headers(url):
+    headers=[
+        "Content-Security-Policy",
+        "Strict-Transport-Security",
+        "X-Frame-Options",
+        "X-Content-Type-Options",
+        "Referrer-Policy",
+        "Permissions-Policy",
+        "X-XSS-Protection",
+        "Cache-Control",
+        "Cross-Origin-Opener-Policy",
+        "Cross-Origin-Resource-Policy"
+    ]
+    response=requests.get(url)
+    s=response.headers
+    headers_missing=[]
+    for header in headers:
+        if header not in s:
+            headers_missing.append(header)        
+    return headers_missing
+
+
+def password_strength(password):
+    score=0
+    if any(c.isupper() for c in password):
+        score+=1
+    if any(c.islower() for c in password):
+        score+=1
+    if any(c.isdigit() for c in password):
+        score+=1
+    if any(not c.isalnum() for c in password):
+        score+=1
+    if password[0].isalpha():
+        score+=1
+    if len(password)>=8:
+        score+=1
+    if score<=2:
+        return (score,"Weak")
+    elif score<=4:
+        return (score,"Moderate")
+    else:
+        return (score,"High")
+    
+
+def generate_report():
+    
